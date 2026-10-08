@@ -16,7 +16,21 @@ POST {{host}}/api/Inventory
 Authorization: Bearer {{adminLogin.response.body.$.token}}
 Content-Type: application/json
 
-{ "itemId": "shield_001", "name": "Wooden Shield", "quantity": 2, "playerId": "" }
+{ "itemId": "shield_001", "name": "Wooden Shield", "quantity": 2, "playerId": "player1" }
+
+### Admin: partially update the first item (copy an id from the list above)
+PATCH {{host}}/api/Inventory/REPLACE_WITH_ITEM_ID
+Authorization: Bearer {{adminLogin.response.body.$.token}}
+Content-Type: application/json
+
+{ "quantity": 7 }
+
+### Validation error (expect 400)
+POST {{host}}/api/Inventory
+Authorization: Bearer {{adminLogin.response.body.$.token}}
+Content-Type: application/json
+
+{ "itemId": "", "name": "", "quantity": -5, "playerId": "" }
 
 ### Login as player1
 # @name playerLogin

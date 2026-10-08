@@ -12,6 +12,7 @@ A RESTful Web API built with **ASP.NET Core (.NET 8)** and **MongoDB**, using a 
 | Swashbuckle.AspNetCore | 7.2.0 |
 | Microsoft.AspNetCore.Authentication.JwtBearer | 8.0.0 |
 | System.IdentityModel.Tokens.Jwt | 8.0.0 |
+| FluentValidation (+ DependencyInjectionExtensions) | 11.11.0 |
 | MongoDB | `mongo:latest` in Docker |
 
 ## Project structure
@@ -22,7 +23,9 @@ GameInventoryApi/
 ├── Services/       AuthService (JWT), InventoryService, PlayerProfileService
 ├── Repositories/   IMongoRepository<T>, MongoRepository<T>
 ├── Models/         User, InventoryItem, PlayerProfile, MongoDbSettings, JwtSettings
-├── DTOs/           LoginDto, AuthResponseDto, InventoryItemDto, PlayerProfileDto
+├── DTOs/           LoginDto, AuthResponseDto, InventoryItemDto, PlayerProfileDto, PatchInventoryItemDto
+├── Validators/     FluentValidation rules for each request body
+├── Filters/        ValidationFilter (runs the validators before every action)
 ├── Data/           SeedData (runs on every startup)
 └── Program.cs      DI, JWT, Swagger, middleware
 ```
@@ -69,9 +72,42 @@ GameInventoryApi/
 | GET | `/api/Inventory/{id}` | Admin | Get one item |
 | POST | `/api/Inventory` | Admin | Create an item (201 Created) |
 | PUT | `/api/Inventory/{id}` | Admin | Replace an item (204) |
+| PATCH | `/api/Inventory/{id}` | Admin | Partially update an item, returns the updated item (200) |
 | DELETE | `/api/Inventory/{id}` | Admin | Delete an item (204) |
 | GET | `/api/PlayerProfile` | Player | Get **own** profile (identified by the `PlayerId` claim in the token) |
 | PUT | `/api/PlayerProfile` | Player | Update **own** profile; 403 if `playerId` in the body is not the caller's |
+
+## Bonus
+
+### PATCH (`PATCH /api/Inventory/{id}`)
+
+Unlike PUT, which replaces the whole document, PATCH only changes the fields present in the body
+(`PatchInventoryItemDto`, all fields nullable). `LastUpdated` is refreshed automatically.
+
+```json
+{ "quantity": 7 }
+```
+
+### FluentValidation
+
+Every request body is validated before it reaches the controller. `ValidationFilter` looks up an
+`IValidator<T>` for each action argument; validators are registered with `AddValidatorsFromAssemblyContaining<Program>()`.
+An invalid body returns **400** with the standard `ValidationProblemDetails` shape:
+
+```json
+{
+  "title": "One or more validation errors occurred.",
+  "status": 400,
+  "errors": { "Quantity": ["'Quantity' must be between 0 and 9999. You entered -5."] }
+}
+```
+
+| Body | Rules |
+|---|---|
+| `LoginDto` | Username, Password not empty |
+| `InventoryItem` (POST/PUT) | ItemId, Name, PlayerId not empty; Quantity 0–9999 |
+| `PatchInventoryItemDto` | At least one field; any field sent must satisfy the same rules as above |
+| `PlayerProfile` (PUT) | Id, PlayerId, Username not empty; Level 1–100; Experience ≥ 0 |
 
 ## Testing with Swagger
 
@@ -98,6 +134,12 @@ Verified end-to-end against a running MongoDB:
 | player1 GET / PUT own profile | 200 / 204, change persisted | ✅ |
 | player1 PUT with another `playerId` | 403 | ✅ 403 |
 | player2 PUT player1's profile | 403 | ✅ 403 |
+| PATCH `{"quantity":7}` then `{"name":"Steel Sword"}` | 200, other fields kept | ✅ |
+| PATCH unknown id / PATCH as player | 404 / 403 | ✅ |
+| Login with empty username/password | 400 | ✅ 400 |
+| POST item with empty fields and quantity -5 | 400, 4 errors | ✅ 400 |
+| PATCH `{}` / PATCH quantity 100000 | 400 | ✅ 400 |
+| PUT profile with Level 999, Experience -1 | 400 | ✅ 400 |
 
 ## Deviations from the handout (needed for the code to compile and run)
 
@@ -113,5 +155,5 @@ Verified end-to-end against a running MongoDB:
 ## Known limitations
 
 - Passwords are stored in plain text (demo only, as stated in the handout).
-- A player can set any `Level` / `Experience` through `PUT /api/PlayerProfile`; a real game should compute these on the server.
+- A player can still set any valid `Level` (1–100) / `Experience` through `PUT /api/PlayerProfile`; a real game should compute these on the server.
 - The JWT secret is in `appsettings.json`; in production it belongs in user secrets or environment variables.
