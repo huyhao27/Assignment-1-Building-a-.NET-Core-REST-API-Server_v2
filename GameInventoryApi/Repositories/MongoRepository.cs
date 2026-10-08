@@ -1,3 +1,4 @@
+using MongoDB.Bson;
 using MongoDB.Driver;
 using System.Linq.Expressions;
 
@@ -16,7 +17,7 @@ public class MongoRepository<T> : IMongoRepository<T> where T : class
         await _collection.Find(_ => true).ToListAsync();
 
     public async Task<T?> GetByIdAsync(string id) =>
-        await _collection.Find(Builders<T>.Filter.Eq("_id", id)).FirstOrDefaultAsync();
+        await _collection.Find(IdFilter(id)).FirstOrDefaultAsync();
 
     public async Task<T?> GetByFilterAsync(Expression<Func<T, bool>> filter) =>
         await _collection.Find(filter).FirstOrDefaultAsync();
@@ -25,8 +26,15 @@ public class MongoRepository<T> : IMongoRepository<T> where T : class
         await _collection.InsertOneAsync(entity);
 
     public async Task UpdateAsync(string id, T entity) =>
-        await _collection.ReplaceOneAsync(Builders<T>.Filter.Eq("_id", id), entity);
+        await _collection.ReplaceOneAsync(IdFilter(id), entity);
 
     public async Task DeleteAsync(string id) =>
-        await _collection.DeleteOneAsync(Builders<T>.Filter.Eq("_id", id));
+        await _collection.DeleteOneAsync(IdFilter(id));
+
+    // A filter built from the string "_id" bypasses the [BsonRepresentation(ObjectId)] mapping,
+    // so a raw string never matches the stored ObjectId; convert it explicitly.
+    private static FilterDefinition<T> IdFilter(string id) =>
+        ObjectId.TryParse(id, out var objectId)
+            ? Builders<T>.Filter.Eq("_id", objectId)
+            : Builders<T>.Filter.Eq("_id", id);
 }
