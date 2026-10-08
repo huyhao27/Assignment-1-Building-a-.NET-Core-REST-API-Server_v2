@@ -44,5 +44,14 @@ public static class SeedData
             Level = 10,
             Experience = 2450
         });
+
+        // Seed Profile for player2
+        await profiles.InsertOneAsync(new PlayerProfile
+        {
+            PlayerId = player2.Id,
+            Username = "player2",
+            Level = 5,
+            Experience = 800
+        });
     }
 }
