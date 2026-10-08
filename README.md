@@ -61,7 +61,7 @@ GameInventoryApi/
 |---|---|---|---|
 | admin | admin123 | Admin | — |
 | player1 | player123 | Player | Profile (Level 10, 2450 XP) + 1 inventory item (Iron Sword) |
-| player2 | player123 | Player | No profile (GET profile returns 404) |
+| player2 | player123 | Player | Profile (Level 5, 800 XP) |
 
 ## Endpoints
 
@@ -133,6 +133,7 @@ Verified end-to-end against a running MongoDB:
 | GET PlayerProfile as admin | 403 | ✅ 403 |
 | player1 GET / PUT own profile | 200 / 204, change persisted | ✅ |
 | player1 PUT with another `playerId` | 403 | ✅ 403 |
+| player2 GET own profile | 200 (Level 5, 800 XP) | ✅ 200 |
 | player2 PUT player1's profile | 403 | ✅ 403 |
 | PATCH `{"quantity":7}` then `{"name":"Steel Sword"}` | 200, other fields kept | ✅ |
 | PATCH unknown id / PATCH as player | 404 / 403 | ✅ |
