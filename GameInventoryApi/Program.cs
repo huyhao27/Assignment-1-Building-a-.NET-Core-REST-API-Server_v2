@@ -1,4 +1,5 @@
 using System.Text;
+using GameInventoryApi.Data;
 using GameInventoryApi.Models;
 using GameInventoryApi.Repositories;
 using GameInventoryApi.Services;
@@ -84,5 +85,11 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+using (var scope = app.Services.CreateScope())
+{
+    var database = scope.ServiceProvider.GetRequiredService<IMongoDatabase>();
+    await SeedData.InitializeAsync(database);
+}
 
 app.Run();
