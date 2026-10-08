@@ -1,5 +1,7 @@
 using System.Text;
+using FluentValidation;
 using GameInventoryApi.Data;
+using GameInventoryApi.Filters;
 using GameInventoryApi.Models;
 using GameInventoryApi.Repositories;
 using GameInventoryApi.Services;
@@ -53,7 +55,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
-builder.Services.AddControllers();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+builder.Services.AddControllers(options => options.Filters.Add<ValidationFilter>());
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
