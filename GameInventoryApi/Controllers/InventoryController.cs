@@ -1,3 +1,4 @@
+using GameInventoryApi.DTOs;
 using GameInventoryApi.Models;
 using GameInventoryApi.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -37,6 +38,14 @@ public class InventoryController : ControllerBase
     {
         await _service.UpdateAsync(id, item);
         return NoContent();
+    }
+
+    [HttpPatch("{id}")]
+    public async Task<ActionResult<InventoryItem>> Patch(string id, [FromBody] PatchInventoryItemDto patch)
+    {
+        var item = await _service.PatchAsync(id, patch);
+        if (item is null) return NotFound();
+        return item;
     }
 
     [HttpDelete("{id}")]
